@@ -1,75 +1,47 @@
 #!/usr/bin/python3
-"""
-BaseModel class defines all common attributes/methods
-for other classes used in AirBnB_clone project
-"""
+"""This module defines a base class for all models in our hbnb clone"""
 import uuid
-from uuid import uuid4
 from datetime import datetime
+from sqlalchemy.ext.declarative import declarative_base
 
-"""
-BaseModel class defines all common attributes/methods
-for other classes used in AirBnB_clone project"""
+Base = declarative_base()
 
 
 class BaseModel:
-    """Base Model class  defines all common attributes/methods
-    for other classes used in AirBnB_clone
-    """
-
+    """A base class for all hbnb models"""
     def __init__(self, *args, **kwargs):
-        """initialization of the BaseModel class"""
-        self.id = self._generate_id()
-        self.created_at = self.updated_at = self._get_curr_time()
-
-        if len(kwargs) != 0:
-            self._assign_attributes(kwargs)
-        else:
+        """Instatntiates a new model"""
+        if not kwargs:
             from models import storage
-
+            self.id = str(uuid.uuid4())
+            self.created_at = datetime.now()
+            self.updated_at = datetime.now()
             storage.new(self)
+        else:
+            kwargs['updated_at'] = datetime.strptime(kwargs['updated_at'],
+                                                     '%Y-%m-%dT%H:%M:%S.%f')
+            kwargs['created_at'] = datetime.strptime(kwargs['created_at'],
+                                                     '%Y-%m-%dT%H:%M:%S.%f')
+            del kwargs['__class__']
+            self.__dict__.update(kwargs)
 
     def __str__(self):
-        """prints the instance of the class in string type
-        Returns:
-            str: [<class name>] (<self.id>) <self.__dict__>
-        """
-        return "[{}] ({}) {}".format(self.__class__.__name__, self.id, self.__dict__)
+        """Returns a string representation of the instance"""
+        cls = (str(type(self)).split('.')[-1]).split('\'')[0]
+        return '[{}] ({}) {}'.format(cls, self.id, self.__dict__)
 
     def save(self):
-        """saves the instance atttributes of the class"""
+        """Updates updated_at with current time when instance is changed"""
         from models import storage
-
-        self.updated_at = self._get_curr_time()
+        self.updated_at = datetime.now()
         storage.save()
 
     def to_dict(self):
-        """creates a dictionary representation with
-        “simple object type” of our BaseModel
-        Returns:
-            dict: A dictionary containing all keys and values of the instance
-        """
-        new_dict = self.__dict__.copy()
-        new_dict["__class__"] = self.__class__.__name__
-        new_dict["created_at"] = self.created_at.isoformat()
-        new_dict["updated_at"] = self.updated_at.isoformat()
-        return new_dict
-
-    @staticmethod
-    def _generate_id():
-        """Generate a unique identifier aka UUID"""
-        return str(uuid4())
-
-    @staticmethod
-    def _get_curr_time():
-        """Returns the current timestamp"""
-        return datetime.today()
-
-    def _assign_attributes(self, attrubutes):
-        """Assigns the attrubutes from keyword arguments"""
-        formatStr = "%Y-%m-%dT%H:%M:%S.%f"
-        for key, value in attrubutes.items():
-            if key == "created_at" or key == "updated_at":
-                self.__dict__[key] = datetime.strptime(value, formatStr)
-            else:
-                self.__dict__[key] = value
+        """Convert instance into dict format"""
+        dictionary = {}
+        dictionary.update(self.__dict__)
+        dictionary.update({'__class__':
+                          (str(type(self)).split('.')[-1]).split('\'')[0]})
+        dictionary['created_at'] = self.created_at.isoformat()
+        dictionary['updated_at'] = self.updated_at.isoformat()
+        return dictionary
